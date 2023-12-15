@@ -1,11 +1,3 @@
-const importObject = {
-  wbg: {
-    __wbg_alert_9ea5a791b0d4c7a3: function (arg0, arg1) {
-      alert(getStringFromWasm0(arg0, arg1));
-    },
-  },
-};
-
 class Noise extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -18,7 +10,7 @@ class Noise extends AudioWorkletProcessor {
       // console.log("processor", event.data);
 
       WebAssembly.compile(event.data).then((mod) => {
-        WebAssembly.instantiate(mod, importObject).then((result) => {
+        WebAssembly.instantiate(mod).then((result) => {
           this.sine = result.exports.sine;
         });
       });
