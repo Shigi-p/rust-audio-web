@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>hello-wasm example</title>
+  </head>
+  <body>
+    <button id="playBtn">Play</button>
+    <button id="stopBtn">Stop</button>
+
+    <script type="module">
+      window.addEventListener("load", async function () {
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+
+        let audioCtx = new AudioContext();
+
+        let destinationNode = audioCtx.destination;
+
+        await audioCtx.audioWorklet.addModule("./noise.js");
+
+        async function play() {
+          await audioCtx.resume();
+
+          let noiseNode = new AudioWorkletNode(audioCtx, "Noise");
+
+          // noiseNode.port.postMessage("pin");
+
+          fetch("./pkg/hello_world_bg.wasm")
+            .then((response) => response.arrayBuffer())
+            .then((bytes) => {
+              noiseNode.port.postMessage(bytes);
+            });
+
+          noiseNode.port.onmessage = (event) => {
+            // console.log("node", event.data);
+          };
+
+          noiseNode.connect(destinationNode);
+
+          let stopBtn = document.getElementById("stopBtn");
+          stopBtn.addEventListener("click", function () {
+            noiseNode.disconnect();
+          });
+        }
+
+        let playBtn = document.getElementById("playBtn");
+        playBtn.addEventListener("click", function () {
+          play();
+        });
+      });
+    </script>
+  </body>
+</html>
