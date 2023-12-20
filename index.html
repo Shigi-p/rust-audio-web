@@ -10,42 +10,51 @@
 
     <script type="module">
       window.addEventListener("load", async function () {
+        // 各種ブラウザ対応
         window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
+        // Web Audio APIを使うためのおまじない
         let audioCtx = new AudioContext();
 
+        // 出力先を変数化
         let destinationNode = audioCtx.destination;
 
+        // noiseProcessorをモジュールとしてインポート
         await audioCtx.audioWorklet.addModule("./noise.js");
 
-        async function play() {
-          await audioCtx.resume();
-
-          let noiseNode = new AudioWorkletNode(audioCtx, "Noise");
-
-          // noiseNode.port.postMessage("pin");
-
-          fetch("./pkg/hello_world_bg.wasm")
-            .then((response) => response.arrayBuffer())
-            .then((bytes) => {
-              noiseNode.port.postMessage(bytes);
-            });
-
-          noiseNode.port.onmessage = (event) => {
-            // console.log("node", event.data);
-          };
-
-          noiseNode.connect(destinationNode);
-
-          let stopBtn = document.getElementById("stopBtn");
-          stopBtn.addEventListener("click", function () {
-            noiseNode.disconnect();
+        // wasmをArrayBufferとしてインポート
+        const wasm = await fetch("./pkg/hello_world_bg.wasm")
+          .then((response) => response.arrayBuffer())
+          .then((bytes) => {
+            return bytes;
           });
-        }
+
+        let noiseNode = null;
 
         let playBtn = document.getElementById("playBtn");
-        playBtn.addEventListener("click", function () {
-          play();
+        playBtn.addEventListener("click", async () => {
+          // 再生する時のおまじない
+          await audioCtx.resume();
+
+          // noiseNodeを作成
+          noiseNode = new AudioWorkletNode(audioCtx, "Noise");
+
+          // noiseProcessorにwasmのArrayBufferを送信
+          noiseNode.port.postMessage(wasm);
+
+          // noiseProcessorから受信したメッセージの処理
+          noiseNode.port.onmessage = (event) => {
+            if (event.data.inputWasm) {
+              // noiseNodeを出力先に接続
+              noiseNode.connect(destinationNode);
+            }
+          };
+        });
+
+        let stopBtn = document.getElementById("stopBtn");
+        stopBtn.addEventListener("click", () => {
+          // noiseNodeを出力先から外す
+          noiseNode.disconnect();
         });
       });
     </script>
