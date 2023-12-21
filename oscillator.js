@@ -1,4 +1,4 @@
-class Noise extends AudioWorkletProcessor {
+class Oscillator extends AudioWorkletProcessor {
   constructor() {
     super();
 
@@ -9,14 +9,14 @@ class Noise extends AudioWorkletProcessor {
     this.sine = null;
     // sawtoothプロパティを定義
 
-    // noiseNodeから受信したメッセージの処理
+    // oscillatorNodeから受信したメッセージの処理
     this.port.onmessage = (event) => {
       // wasmをコンパイルしてインスタンス化
       WebAssembly.instantiate(event.data).then((result) => {
         // sineプロパティにwasmの関数を代入
         this.sine = result.instance.exports.sine;
         this.sawtooth = result.instance.exports.sawtooth;
-        // noiseNodeにsineプロパティにwasmの関数を代入したことを送信
+        // oscillatorNodeにsineプロパティにwasmの関数を代入したことを送信
         this.port.postMessage({ inputWasm: true });
       });
     };
@@ -34,11 +34,11 @@ class Noise extends AudioWorkletProcessor {
       for (let i = 0; i < output[channel].length; i++) {
         // 正弦波の生成
         // output[channel][i] = Math.sin((2.0 * Math.PI * 440 * this.phase) / sampleRate);
-        // output[channel][i] = this.sine(this.phase, sampleRate);
+        output[channel][i] = this.sine(this.phase, sampleRate);
 
         // ノコギリ波の生成
         // output[channel][i] = (2 * this.phase) / (sampleRate / 440) - 1;
-        output[channel][i] = this.sawtooth(this.phase, sampleRate);
+        // output[channel][i] = this.sawtooth(this.phase, sampleRate);
 
         this.phase++;
 
@@ -51,5 +51,5 @@ class Noise extends AudioWorkletProcessor {
     return true;
   }
 }
-//"Noise"にNoiseクラスを登録
-registerProcessor("Noise", Noise);
+//"Oscillator"にOscillatorクラスを登録
+registerProcessor("Oscillator", Oscillator);

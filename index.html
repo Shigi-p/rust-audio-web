@@ -19,8 +19,8 @@
         // 出力先を変数化
         let destinationNode = audioCtx.destination;
 
-        // noiseProcessorをモジュールとしてインポート
-        await audioCtx.audioWorklet.addModule("./noise.js");
+        // OscillatorProcessorをモジュールとしてインポート
+        await audioCtx.audioWorklet.addModule("./oscillator.js");
 
         // wasmをArrayBufferとしてインポート
         const wasm = await fetch("./pkg/audio_logic_bg.wasm")
@@ -29,32 +29,32 @@
             return bytes;
           });
 
-        let noiseNode = null;
+        let oscillatorNode = null;
 
         let playBtn = document.getElementById("playBtn");
         playBtn.addEventListener("click", async () => {
           // 再生する時のおまじない
           await audioCtx.resume();
 
-          // noiseNodeを作成
-          noiseNode = new AudioWorkletNode(audioCtx, "Noise");
+          // oscillatorNodeを作成
+          oscillatorNode = new AudioWorkletNode(audioCtx, "Oscillator");
 
-          // noiseProcessorにwasmのArrayBufferを送信
-          noiseNode.port.postMessage(wasm);
+          // oscillatorProcessorにwasmのArrayBufferを送信
+          oscillatorNode.port.postMessage(wasm);
 
-          // noiseProcessorから受信したメッセージの処理
-          noiseNode.port.onmessage = (event) => {
+          // oscillatorProcessorから受信したメッセージの処理
+          oscillatorNode.port.onmessage = (event) => {
             if (event.data.inputWasm) {
-              // noiseNodeを出力先に接続
-              noiseNode.connect(destinationNode);
+              // oscillatorNodeを出力先に接続
+              oscillatorNode.connect(destinationNode);
             }
           };
         });
 
         let stopBtn = document.getElementById("stopBtn");
         stopBtn.addEventListener("click", () => {
-          // noiseNodeを出力先から外す
-          noiseNode.disconnect();
+          // oscillatorNodeを出力先から外す
+          oscillatorNode.disconnect();
         });
       });
     </script>
