@@ -23,7 +23,7 @@
         await audioCtx.audioWorklet.addModule("./noise.js");
 
         // wasmをArrayBufferとしてインポート
-        const wasm = await fetch("./pkg/hello_world_bg.wasm")
+        const wasm = await fetch("./pkg/audio_logic_bg.wasm")
           .then((response) => response.arrayBuffer())
           .then((bytes) => {
             return bytes;
