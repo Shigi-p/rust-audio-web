@@ -9,6 +9,8 @@ class OscillatorProcessor extends AudioWorkletProcessor {
     this.sine = null;
     // sawtoothプロパティを定義
     this.sawtooth = null;
+    // squareプロパティを定義
+    this.square = null;
 
     // oscillatorNodeから受信したメッセージの処理
     this.port.onmessage = (event) => {
@@ -17,6 +19,7 @@ class OscillatorProcessor extends AudioWorkletProcessor {
         // sineプロパティにwasmの関数を代入
         this.sine = result.instance.exports.sine;
         this.sawtooth = result.instance.exports.sawtooth;
+        this.square = result.instance.exports.square;
         // oscillatorNodeのsineプロパティにwasmの関数を代入したことを送信
         this.port.postMessage({ inputWasm: true });
       });
@@ -27,11 +30,11 @@ class OscillatorProcessor extends AudioWorkletProcessor {
    * outputs: unknown[][][]; 出力の数 x Channel数 x 128(Audio Workletが一度に処理できる数)
    */
   //オーディオ処理の実装箇所
-  process(inputs, outputs, parameters) {
+  process(_inputs, outputs, _parameters) {
     if (!this.sine) return false;
 
     // 複数の入出力があった場合、最初のinputs, outputsを取得
-    // let input = inputs[0];
+    // let input = _inputs[0];
     let output = outputs[0];
 
     for (let channel = 0; channel < output.length; channel++) {
@@ -43,6 +46,9 @@ class OscillatorProcessor extends AudioWorkletProcessor {
         // ノコギリ波の生成
         // output[channel][i] = (2 * this.phase) / (sampleRate / 440) - 1;
         // output[channel][i] = this.sawtooth(this.phase, sampleRate);
+
+        // 矩形波の生成
+        output[channel][i] = this.square(this.phase, sampleRate);
 
         this.phase++;
 

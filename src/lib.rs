@@ -10,3 +10,12 @@ pub fn sine(phase: f64, sample_rate: f64) -> f64 {
 pub fn sawtooth(phase: f64, sample_rate: f64) -> f64 {
     ((2.0 * phase) / (sample_rate / 440.0)) - 1.0
 }
+
+// 矩形波
+#[wasm_bindgen]
+pub fn square(phase: f64, sample_rate: f64) -> f64 {
+    match phase < (sample_rate / 440.0) / 2.0 {
+        true => 0.2,
+        false => -0.2
+    }
+}
