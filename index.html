@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>rust audio web</title>
+  </head>
+  <body>
+    <button id="playBtn">Play</button>
+    <button id="stopBtn">Stop</button>
+
+    <script type="module">
+      window.addEventListener("load", async function () {
+        // 各種ブラウザ対応
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+
+        // Web Audio APIを使うためのおまじない
+        let audioCtx = new AudioContext();
+
+        // 出力先を変数化
+        let destinationNode = audioCtx.destination;
+
+        // OscillatorProcessorをモジュールとしてインポート
+        await audioCtx.audioWorklet.addModule("./oscillator.js");
+
+        // wasmをArrayBufferとしてインポート
+        const wasm = await fetch("./pkg/audio_logic_bg.wasm")
+          .then((response) => response.arrayBuffer())
+          .then((bytes) => {
+            return bytes;
+          });
+
+        let oscillatorNode = null;
+
+        let playBtn = document.getElementById("playBtn");
+        playBtn.addEventListener("click", async () => {
+          // 再生する時のおまじない
+          await audioCtx.resume();
+
+          // oscillatorNodeを作成
+          oscillatorNode = new AudioWorkletNode(audioCtx, "Oscillator");
+
+          // oscillatorProcessorにwasmのArrayBufferを送信
+          oscillatorNode.port.postMessage(wasm);
+
+          // oscillatorProcessorから受信したメッセージの処理
+          oscillatorNode.port.onmessage = (event) => {
+            if (event.data.inputWasm) {
+              // oscillatorNodeを出力先に接続
+              oscillatorNode.connect(destinationNode);
+            }
+          };
+        });
+
+        let stopBtn = document.getElementById("stopBtn");
+        stopBtn.addEventListener("click", () => {
+          // oscillatorNodeを出力先から外す
+          oscillatorNode.disconnect();
+        });
+      });
+    </script>
+  </body>
+</html>
