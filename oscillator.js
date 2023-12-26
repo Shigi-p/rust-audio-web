@@ -1,4 +1,4 @@
-class Oscillator extends AudioWorkletProcessor {
+class OscillatorProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
 
@@ -8,6 +8,7 @@ class Oscillator extends AudioWorkletProcessor {
     // sineプロパティを定義
     this.sine = null;
     // sawtoothプロパティを定義
+    this.sawtooth = null;
 
     // oscillatorNodeから受信したメッセージの処理
     this.port.onmessage = (event) => {
@@ -16,17 +17,20 @@ class Oscillator extends AudioWorkletProcessor {
         // sineプロパティにwasmの関数を代入
         this.sine = result.instance.exports.sine;
         this.sawtooth = result.instance.exports.sawtooth;
-        // oscillatorNodeにsineプロパティにwasmの関数を代入したことを送信
+        // oscillatorNodeのsineプロパティにwasmの関数を代入したことを送信
         this.port.postMessage({ inputWasm: true });
       });
     };
   }
 
+  /**
+   * outputs: unknown[][][]; 出力の数 x Channel数 x 128(Audio Workletが一度に処理できる数)
+   */
   //オーディオ処理の実装箇所
   process(inputs, outputs, parameters) {
     if (!this.sine) return false;
 
-    //複数の入出力があった場合、最初のinputs, outputsを取得
+    // 複数の入出力があった場合、最初のinputs, outputsを取得
     // let input = inputs[0];
     let output = outputs[0];
 
@@ -52,4 +56,4 @@ class Oscillator extends AudioWorkletProcessor {
   }
 }
 //"Oscillator"にOscillatorクラスを登録
-registerProcessor("Oscillator", Oscillator);
+registerProcessor("Oscillator", OscillatorProcessor);
