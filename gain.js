@@ -12,6 +12,9 @@ class GainProcessor extends AudioWorkletProcessor {
     };
   }
 
+  /**
+   * type gainType[]
+   */
   static get parameterDescriptors() {
     return [
       {
@@ -19,12 +22,13 @@ class GainProcessor extends AudioWorkletProcessor {
         defaultValue: 1,
         minValue: 0,
         maxValue: 1,
-        automationRate: "a-rate",
+        automationRate: "a-rate", // a-rate or k-rate
       },
     ];
   }
 
   /**
+   * inputs: unknown[][][]; 入力の数 x Channel数 x 128(Audio Workletが一度に処理できる数)
    * outputs: unknown[][][]; 出力の数 x Channel数 x 128(Audio Workletが一度に処理できる数)
    */
   //オーディオ処理の実装箇所
