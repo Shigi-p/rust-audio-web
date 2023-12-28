@@ -8,6 +8,7 @@ class OscillatorProcessor extends AudioWorkletProcessor {
     this.sawtooth = null;
     this.square = null;
     this.triangle = null;
+    this.noise = null;
 
     this.isStopped = false;
 
@@ -15,15 +16,19 @@ class OscillatorProcessor extends AudioWorkletProcessor {
     this.port.onmessage = (event) => {
       // wasmをコンパイルしてインスタンス化
       if (event.data.wasm) {
-        WebAssembly.instantiate(event.data.wasm).then((result) => {
-          this.sine = result.instance.exports.sine;
-          this.sawtooth = result.instance.exports.sawtooth;
-          this.square = result.instance.exports.square;
-          this.triangle = result.instance.exports.triangle;
+        // FIXME: instantiateの第二引数に正しいオブジェクトを渡す？もしくは根本の構成を変更する？
+        WebAssembly.instantiate(event.data.wasm, { wbg: "foobar" }).then(
+          (result) => {
+            this.sine = result.instance.exports.sine;
+            this.sawtooth = result.instance.exports.sawtooth;
+            this.square = result.instance.exports.square;
+            this.triangle = result.instance.exports.triangle;
+            this.noise = result.instance.exports.noise;
 
-          // oscillatorNodeにwasmの関数が代入されたことを送信
-          this.port.postMessage({ inputWasm: true });
-        });
+            // oscillatorNodeにwasmの関数が代入されたことを送信
+            this.port.postMessage({ inputWasm: true });
+          }
+        );
       }
 
       if (event.data.isStopped) {
@@ -42,6 +47,7 @@ class OscillatorProcessor extends AudioWorkletProcessor {
       !this.sawtooth ||
       !this.square ||
       !this.triangle ||
+      !this.noise ||
       this.isStopped
     )
       return false;
@@ -52,7 +58,7 @@ class OscillatorProcessor extends AudioWorkletProcessor {
     for (let channel = 0; channel < output.length; channel++) {
       for (let i = 0; i < output[channel].length; i++) {
         // 正弦波の生成
-        output[channel][i] = this.sine(this.phase, sampleRate);
+        // output[channel][i] = this.sine(this.phase, sampleRate);
 
         // ノコギリ波の生成
         // output[channel][i] = this.sawtooth(this.phase, sampleRate);
@@ -60,8 +66,11 @@ class OscillatorProcessor extends AudioWorkletProcessor {
         // 矩形波の生成
         // output[channel][i] = this.square(this.phase, sampleRate);
 
-        // // 三角波の生成
+        // 三角波の生成
         // output[channel][i] = this.triangle(this.phase, sampleRate);
+
+        // ホワイトノイズの生成
+        output[channel][i] = this.noise();
 
         this.phase++;
 
