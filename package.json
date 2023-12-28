@@ -1,16 +1,17 @@
 {
-  "devDependencies": {
-    "@types/node": "^20.10.5",
-    "nodemon": "^3.0.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+  "name": "rust-audio-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "packageManager": "yarn@3.2.0",
-  "scripts": {
-    "build:ts": "tsc src/index.ts --outDir dist",
-    "build:wasm": "wasm-pack build --target web --out-dir ./pkg",
-    "dev": "nodemon src/index.ts",
-    "serve": "ts-node ./src",
-    "start": "node ./dist"
+  "devDependencies": {
+    "sass": "^1.69.5",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
   }
 }

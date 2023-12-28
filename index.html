@@ -1,81 +1,17 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <title>rust audio web</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + TS</title>
   </head>
   <body>
-    <button id="playBtn">Play</button>
-    <button id="stopBtn">Stop</button>
-    <input id="gain" type="range" min="0" max="100" />
-
-    <script type="module">
-      window.addEventListener("load", async function () {
-        // 各種ブラウザ対応
-        window.AudioContext = window.AudioContext || window.webkitAudioContext;
-
-        // Web Audio APIを使うためのおまじない
-        let audioCtx = new AudioContext();
-
-        // 出力先を変数化
-        let destinationNode = audioCtx.destination;
-
-        // OscillatorProcessorをモジュールとしてインポート
-        await audioCtx.audioWorklet.addModule("./oscillator.js");
-        await audioCtx.audioWorklet.addModule("./gain.js");
-
-        // wasmをArrayBufferとしてインポート
-        const wasm = await fetch("./pkg/audio_logic_bg.wasm")
-          .then((response) => response.arrayBuffer())
-          .then((bytes) => {
-            return bytes;
-          });
-
-        let oscillatorNode = null;
-
-        // gainNodeを作成
-        let gainNode = null;
-
-        let playBtn = document.getElementById("playBtn");
-        playBtn.addEventListener("click", async () => {
-          // 再生する時のおまじない
-          await audioCtx.resume();
-
-          // oscillatorNodeを作成
-          oscillatorNode = new AudioWorkletNode(audioCtx, "Oscillator");
-          gainNode = new AudioWorkletNode(audioCtx, "Gain");
-          gainNode.parameters.get("gain").value =
-            document.getElementById("gain").value / 100;
-
-          // oscillatorProcessorにwasmのArrayBufferを送信
-          oscillatorNode.port.postMessage({ wasm: wasm });
-
-          // oscillatorProcessorから受信したメッセージの処理
-          oscillatorNode.port.onmessage = (event) => {
-            if (event.data.inputWasm) {
-              // oscillatorNodeを出力先に接続
-              // oscillatorNode.connect(destinationNode);
-              oscillatorNode.connect(gainNode).connect(destinationNode);
-            }
-          };
-        });
-
-        let stopBtn = document.getElementById("stopBtn");
-        stopBtn.addEventListener("click", () => {
-          // oscillatorNodeを出力先から外す
-          oscillatorNode.port.postMessage({ isStopped: true });
-          oscillatorNode.disconnect();
-
-          // gainNodeを出力先から外す
-          gainNode.port.postMessage({ isStopped: true });
-          gainNode.disconnect();
-        });
-
-        let gain = document.getElementById("gain");
-        gain.addEventListener("input", (e) => {
-          gainNode.parameters.get("gain").value = e.target.value / 100;
-        });
-      });
-    </script>
+    <div id="app">
+      <button id="playBtn">Play</button>
+      <button id="stopBtn">Stop</button>
+      <input id="gain" type="range" min="0" max="100" />
+    </div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
