@@ -7,6 +7,7 @@ class OscillatorProcessor extends AudioWorkletProcessor {
     this.sine = null;
     this.sawtooth = null;
     this.square = null;
+    this.triangle = null;
 
     this.isStopped = false;
 
@@ -18,6 +19,7 @@ class OscillatorProcessor extends AudioWorkletProcessor {
           this.sine = result.instance.exports.sine;
           this.sawtooth = result.instance.exports.sawtooth;
           this.square = result.instance.exports.square;
+          this.triangle = result.instance.exports.triangle;
 
           // oscillatorNodeにwasmの関数が代入されたことを送信
           this.port.postMessage({ inputWasm: true });
@@ -35,7 +37,13 @@ class OscillatorProcessor extends AudioWorkletProcessor {
    */
   //オーディオ処理の実装箇所
   process(_inputs, outputs, _parameters) {
-    if (!this.sine || !this.sawtooth || !this.square || this.isStopped)
+    if (
+      !this.sine ||
+      !this.sawtooth ||
+      !this.square ||
+      !this.triangle ||
+      this.isStopped
+    )
       return false;
 
     // 複数の出力があった場合、最初のoutputsを取得
@@ -51,6 +59,9 @@ class OscillatorProcessor extends AudioWorkletProcessor {
 
         // 矩形波の生成
         // output[channel][i] = this.square(this.phase, sampleRate);
+
+        // // 三角波の生成
+        // output[channel][i] = this.triangle(this.phase, sampleRate);
 
         this.phase++;
 
