@@ -6,8 +6,17 @@
   </head>
   <body>
     <button id="playBtn">Play</button>
-    <button id="stopBtn">Stop</button>
-    <input id="gain" type="range" min="0" max="100" />
+    <button id="stopBtn">Stop</button><br />
+    <select id="oscillatorType">
+      <option value="sine">sine</option>
+      <option value="triangle">triangle</option>
+      <option value="sawtooth">sawtooth</option>
+      <option value="square">square</option>
+      <option value="noise">noise</option></select
+    ><br />
+    PWM Width:
+    <input id="pwmWidth" type="range" value="0" min="-100" max="100" /><br />
+    gain: <input id="gain" type="range" value="80" min="0" max="100" />
 
     <script type="module">
       window.addEventListener("load", async function () {
@@ -20,9 +29,8 @@
         // 出力先を変数化
         let destinationNode = audioCtx.destination;
 
-        // OscillatorProcessorをモジュールとしてインポート
-        await audioCtx.audioWorklet.addModule("./oscillator.js");
-        await audioCtx.audioWorklet.addModule("./gain.js");
+        // AudioProcessorをモジュールとしてインポート
+        await audioCtx.audioWorklet.addModule("./processor/audio.js");
 
         // wasmをArrayBufferとしてインポート
         const wasm = await fetch("./pkg/audio_logic_bg.wasm")
@@ -31,49 +39,58 @@
             return bytes;
           });
 
-        let oscillatorNode = null;
-
-        // gainNodeを作成
-        let gainNode = null;
+        let audioNode = null;
 
         let playBtn = document.getElementById("playBtn");
         playBtn.addEventListener("click", async () => {
           // 再生する時のおまじない
           await audioCtx.resume();
 
-          // oscillatorNodeを作成
-          oscillatorNode = new AudioWorkletNode(audioCtx, "Oscillator");
-          gainNode = new AudioWorkletNode(audioCtx, "Gain");
-          gainNode.parameters.get("gain").value =
+          // audioNodeを作成
+          audioNode = new AudioWorkletNode(audioCtx, "Audio");
+          // gainパラメータを設定
+          audioNode.parameters.get("gain").value =
             document.getElementById("gain").value / 100;
-
-          // oscillatorProcessorにwasmのArrayBufferを送信
-          oscillatorNode.port.postMessage({ wasm: wasm });
-
-          // oscillatorProcessorから受信したメッセージの処理
-          oscillatorNode.port.onmessage = (event) => {
-            if (event.data.inputWasm) {
-              // oscillatorNodeを出力先に接続
-              // oscillatorNode.connect(destinationNode);
-              oscillatorNode.connect(gainNode).connect(destinationNode);
+          audioNode.parameters.get("pwmWidth").value =
+            document.getElementById("pwmWidth").value / 100;
+          // audioProcessorにwasmのArrayBufferを送信
+          audioNode.port.postMessage({ type: "wasm", wasm: wasm });
+          audioNode.port.postMessage({
+            type: "oscillatorType",
+            oscillatorType: document.getElementById("oscillatorType").value,
+          });
+          audioNode.port.onmessage = (event) => {
+            if (event.data.isInstancedWasm) {
+              // audioNodeを出力先に接続
+              audioNode.connect(destinationNode);
+              audioNode.port.postMessage({ type: "isPlayed", isPlayed: true });
             }
           };
         });
 
         let stopBtn = document.getElementById("stopBtn");
         stopBtn.addEventListener("click", () => {
-          // oscillatorNodeを出力先から外す
-          oscillatorNode.port.postMessage({ isStopped: true });
-          oscillatorNode.disconnect();
+          audioNode.port.postMessage({ type: "isPlayed", isPlayed: false });
+          audioNode.disconnect(destinationNode);
+          audioNode = null;
+        });
 
-          // gainNodeを出力先から外す
-          gainNode.port.postMessage({ isStopped: true });
-          gainNode.disconnect();
+        let oscillator = document.getElementById("oscillatorType");
+        oscillator.addEventListener("change", (e) => {
+          audioNode.port.postMessage({
+            type: "oscillatorType",
+            oscillatorType: e.target.value,
+          });
+        });
+
+        let pwmWidth = document.getElementById("pwmWidth");
+        pwmWidth.addEventListener("input", (e) => {
+          audioNode.parameters.get("pwmWidth").value = e.target.value / 100;
         });
 
         let gain = document.getElementById("gain");
         gain.addEventListener("input", (e) => {
-          gainNode.parameters.get("gain").value = e.target.value / 100;
+          audioNode.parameters.get("gain").value = e.target.value / 100;
         });
       });
     </script>
