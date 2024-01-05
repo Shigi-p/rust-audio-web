@@ -1,35 +1,87 @@
 use wasm_bindgen::prelude::*;
 use std::f64::consts::PI;
+// use rand::Rng;
+// use rand::prelude::*;
 
-// 正弦波
 #[wasm_bindgen]
-pub fn sine(phase: f64, sample_rate: f64) -> f64 {
-    ((2.0 * PI * 440.0 * phase) / sample_rate).sin()
-}
+pub fn main_fn(oscillator_type: &str, frequency: f64, phase: f64, sample_rate: f64, pwm_width: f64, gain: f64) -> Vec<f64> {
+  let mut block: Vec<f64> = Vec::with_capacity(128);
+  let mut phase = phase;
 
-// ノコギリ波
-#[wasm_bindgen]
-pub fn sawtooth(phase: f64, sample_rate: f64) -> f64 {
-    ((2.0 * phase) / (sample_rate / 440.0)) - 1.0
-}
-
-// 矩形波
-#[wasm_bindgen]
-pub fn square(phase: f64, sample_rate: f64) -> f64 {
-    match phase < (sample_rate / 440.0) / 2.0 {
-        true => 0.2,
-        false => -0.2
+  for _ in 0..128 {
+    match oscillator_type {
+      "sine" => {
+          block.push(gain * sine(frequency, phase, sample_rate));
+          phase += 1.0;
+        }
+      "triangle" => {
+        block.push(gain * triangle(frequency, phase, sample_rate));
+        phase += 1.0;
+      }
+      "sawtooth" => {
+        block.push(gain * sawtooth(frequency, phase, sample_rate));
+        phase += 1.0;
+      }
+      "square" => {
+        block.push(gain * square(frequency, phase, sample_rate, pwm_width));
+        phase += 1.0;
+      }
+      "noise" => {
+        /*
+        let mut rng = rand::thread_rng();
+        block.push(gain * (2.0 * (rng.gen::<f64>() - 0.5)))
+        */
+        block.push(0.0);
+        phase += 1.0;
+      }
+      _ => {
+        block.push(0.0);
+        phase += 1.0;
+      }
     }
+
+    if sample_rate / frequency <= phase {
+      phase = 0.0;
+    }
+  }
+
+  block
 }
 
-// https://weblike-curtaincall.ssl-lolipop.jp/portfolio-web-sounder/webaudioapi-basic/custom#:~:text=0%20%3C%3D%20phase%20%3C%20t0-,%E4%B8%89%E8%A7%92%E6%B3%A2,-var%20t0%20%3D%20sampleRate
-// 三角波
 #[wasm_bindgen]
-pub fn triangle(phase: f64, sample_rate: f64) -> f64 {
-    let t0 = sample_rate / 440.0;
-    let s = 4.0 * phase / t0;
-    match phase < (t0 / 2.0) {
-        true => -1.0 + s,
-        false => 3.0 - s
+pub fn sine(frequency: f64, phase: f64, sample_rate: f64) -> f64 {
+  ((2.0 * PI * frequency * phase) / sample_rate).sin() 
+}
+
+#[wasm_bindgen]
+pub fn triangle(frequency: f64, phase: f64, sample_rate: f64) -> f64 {
+  match phase < ((sample_rate / frequency) / 2.0) {
+    true => -1.0 + (4.0 * phase / (sample_rate / frequency)),
+    false => 3.0 - (4.0 * phase / (sample_rate / frequency))
+  }
+}
+
+#[wasm_bindgen]
+pub fn sawtooth(frequency: f64, phase: f64, sample_rate: f64) -> f64 {
+  ((2.0 * phase) / (sample_rate / frequency)) - 1.0
+}
+
+#[wasm_bindgen]
+pub fn square(frequency: f64, phase: f64, sample_rate: f64, pwm_width: f64) -> f64 {
+  match phase < ((sample_rate / frequency) / 2.0) - (((sample_rate / frequency) / 2.0) * pwm_width) {
+    true => 1.0,
+    false => -1.0
+  }
+}
+
+#[wasm_bindgen]
+pub fn phase_fn(frequency: f64, phase: f64, sample_rate: f64) -> f64 {
+  let mut phase = phase;
+  for _ in 0..128 {
+    if sample_rate / frequency <= phase {
+      phase = 0.0;
     }
+    phase += 1.0;
+  }
+  phase
 }
