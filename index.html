@@ -6,8 +6,6 @@
     <link rel="stylesheet" href="./index.css" />
   </head>
   <body>
-    <button id="playBtn">Play</button>
-    <button id="stopBtn">Stop</button><br />
     <div>
       oscillator1<br />
       oscillatorType:
@@ -187,74 +185,6 @@
             });
           });
         });
-        /*
-        let playBtn = document.getElementById("playBtn");
-        playBtn.addEventListener("click", async () => {
-          // 再生する時のおまじない
-          await audioCtx.resume();
-
-          // audioNodeを作成
-          audioNode = new AudioWorkletNode(audioCtx, "Audio");
-
-          // audioProcessorにwasmのArrayBufferを送信
-          audioNode.port.postMessage({ type: "wasm", wasm: wasm });
-
-          // oscillator1
-          audioNode.parameters.get("gain1").value =
-            document.getElementById("gain1").value / 100;
-          audioNode.parameters.get("pwmWidth1").value =
-            document.getElementById("pwmWidth1").value / 100;
-          audioNode.parameters.get("coarse1").value =
-            document.getElementById("coarse1").value;
-          audioNode.parameters.get("fine1").value =
-            document.getElementById("fine1").value;
-          audioNode.port.postMessage({
-            type: "oscillatorType1",
-            oscillatorType1: document.getElementById("oscillatorType1").value,
-          });
-          // oscillator2
-          audioNode.parameters.get("gain2").value =
-            document.getElementById("gain2").value / 100;
-          audioNode.parameters.get("pwmWidth2").value =
-            document.getElementById("pwmWidth2").value / 100;
-          audioNode.parameters.get("coarse2").value =
-            document.getElementById("coarse2").value;
-          audioNode.parameters.get("fine2").value =
-            document.getElementById("fine2").value;
-          audioNode.port.postMessage({
-            type: "oscillatorType2",
-            oscillatorType2: document.getElementById("oscillatorType2").value,
-          });
-          // oscillator3
-          audioNode.parameters.get("gain3").value =
-            document.getElementById("gain3").value / 100;
-          audioNode.parameters.get("pwmWidth3").value =
-            document.getElementById("pwmWidth3").value / 100;
-          audioNode.parameters.get("coarse3").value =
-            document.getElementById("coarse3").value;
-          audioNode.parameters.get("fine3").value =
-            document.getElementById("fine3").value;
-          audioNode.port.postMessage({
-            type: "oscillatorType3",
-            oscillatorType3: document.getElementById("oscillatorType3").value,
-          });
-
-          audioNode.port.onmessage = (event) => {
-            if (event.data.isInstancedWasm) {
-              // audioNodeを出力先に接続
-              audioNode.connect(destinationNode);
-              audioNode.port.postMessage({ type: "isPlayed", isPlayed: true });
-            }
-          };
-        });
-
-        let stopBtn = document.getElementById("stopBtn");
-        stopBtn.addEventListener("click", () => {
-          audioNode.port.postMessage({ type: "isPlayed", isPlayed: false });
-          audioNode.disconnect(destinationNode);
-          audioNode = null;
-        });
-        */
 
         // oscillator1
         let oscillatorType1 = document.getElementById("oscillatorType1");
