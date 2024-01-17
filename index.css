@@ -1,0 +1,18 @@
+.key_wrapper {
+  display: flex;
+}
+
+.key {
+  display: block;
+  width: 200px;
+  height: 600px;
+  border: solid 1px black;
+}
+
+.key_white {
+  background-color: white;
+}
+
+.key_black {
+  background-color: black;
+}
