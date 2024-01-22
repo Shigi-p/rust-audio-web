@@ -1,4 +1,10 @@
-import init, { main_fn, phase_fn } from "../pkg/audio_logic.js";
+import init, {
+  key_frequency_fn,
+  oscillator_fn,
+  synthesize_oscillator_fn,
+  phase_fn,
+  volume_fn,
+} from "../pkg/audio_logic.js";
 
 //"Audior"にAudioクラスを登録
 registerProcessor(
@@ -7,8 +13,11 @@ registerProcessor(
     constructor() {
       super();
 
-      this.mainFn = null;
+      this.keyFrequencyFn = null;
+      this.oscillatorFn = null;
+      this.synthesizeOscillatorFn = null;
       this.phase1Fn = null;
+      this.volumeFn = null;
       this.phase1 = 0;
       this.phase2Fn = null;
       this.phase2 = 0;
@@ -20,6 +29,8 @@ registerProcessor(
       this.keyName = "a";
       this.keyPitch = 4;
       this.isPlayed = false;
+      this.size = 128;
+      this.frame = 0;
 
       // audioNodeから受信したメッセージの処理
       this.port.onmessage = async (event) => {
@@ -28,8 +39,11 @@ registerProcessor(
           await init(WebAssembly.compile(event.data.wasm)).then(() => {
             this.port.postMessage({ isInstancedWasm: true });
           });
-          this.mainFn = main_fn;
+          this.keyFrequencyFn = key_frequency_fn;
+          this.oscillatorFn = oscillator_fn;
+          this.synthesizeOscillatorFn = synthesize_oscillator_fn;
           this.phaseFn = phase_fn;
+          this.volumeFn = volume_fn;
         }
 
         if (event.data.type === "oscillatorType1") {
@@ -50,6 +64,9 @@ registerProcessor(
 
         if (event.data.type === "isPlayed") {
           this.isPlayed = event.data.isPlayed;
+          if (!this.isPlayed) {
+            this.frame = 0;
+          }
         }
       };
     }
@@ -157,56 +174,83 @@ registerProcessor(
     process(_inputs, outputs, parameters) {
       if (!this.isPlayed) return false;
 
+      this.frame += 128;
+
       // 複数の出力があった場合、最初のoutputsを取得
       let output = outputs[0];
 
+      let keyFrequency = this.keyFrequencyFn(this.keyPitch, this.keyName);
+      let oscillator1_out = this.oscillatorFn(
+        this.oscillatorType1,
+        keyFrequency,
+        parameters.coarse1[0],
+        parameters.fine1[0],
+        parameters.pwmWidth1[0],
+        this.phase1,
+        parameters.gain1[0],
+        sampleRate,
+        this.size
+      );
+      let oscillator2_out = this.oscillatorFn(
+        this.oscillatorType2,
+        keyFrequency,
+        parameters.coarse2[0],
+        parameters.fine2[0],
+        parameters.pwmWidth2[0],
+        this.phase2,
+        parameters.gain2[0],
+        sampleRate,
+        this.size
+      );
+      let oscillator3_out = this.oscillatorFn(
+        this.oscillatorType3,
+        keyFrequency,
+        parameters.coarse3[0],
+        parameters.fine3[0],
+        parameters.pwmWidth3[0],
+        this.phase3,
+        parameters.gain3[0],
+        sampleRate,
+        this.size
+      );
+
+      let synthesizedOscillator = this.synthesizeOscillatorFn(
+        oscillator1_out,
+        oscillator2_out,
+        oscillator3_out,
+        this.size
+      );
+
+      let volume_out = volume_fn(
+        synthesizedOscillator,
+        0.01,
+        parameters.masterVolume[0],
+        0,
+        1,
+        this.size,
+        sampleRate,
+        this.frame
+      );
+
       for (let channel = 0; channel < output.length; channel++) {
-        output[channel].set(
-          this.mainFn(
-            this.oscillatorType1,
-            parameters.pwmWidth1[0],
-            parameters.coarse1[0],
-            parameters.fine1[0],
-            parameters.gain1[0],
-            this.phase1,
-            this.oscillatorType2,
-            parameters.pwmWidth2[0],
-            parameters.coarse2[0],
-            parameters.fine2[0],
-            parameters.gain2[0],
-            this.phase2,
-            this.oscillatorType3,
-            parameters.pwmWidth3[0],
-            parameters.coarse3[0],
-            parameters.fine3[0],
-            parameters.gain3[0],
-            this.phase3,
-            this.keyName,
-            this.keyPitch,
-            sampleRate,
-            parameters.masterVolume[0]
-          )
-        );
+        output[channel].set(volume_out);
 
         this.phase1 = this.phaseFn(
-          this.keyName,
-          this.keyPitch,
+          keyFrequency,
           parameters.coarse1[0],
           parameters.fine1[0],
           this.phase1,
           sampleRate
         );
         this.phase2 = this.phaseFn(
-          this.keyName,
-          this.keyPitch,
+          keyFrequency,
           parameters.coarse2[0],
           parameters.fine2[0],
           this.phase2,
           sampleRate
         );
         this.phase3 = this.phaseFn(
-          this.keyName,
-          this.keyPitch,
+          keyFrequency,
           parameters.coarse3[0],
           parameters.fine3[0],
           this.phase3,
