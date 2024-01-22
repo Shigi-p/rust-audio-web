@@ -188,9 +188,10 @@ pub fn volume_fn(array: Vec<f32>, start_value: f32, end_value: f32, start_time: 
 
   for i in 0..size {
     let time = sample_cycle * (i as f32 + (128.0 * (current_frame / 128.0 - 1.0)));
-    // let block_tmp = array[i as usize] * exponential_ramp_to_value_at_time(start_value, end_value, start_time, end_time, time);
+    let block_tmp = array[i as usize] * exponential_ramp_to_value_at_time(start_value, end_value, start_time, end_time, time);
     // let block_tmp = array[i as usize] * linear_ramp_to_value_at_time(start_value, end_value, start_time, end_time, time);
-    let block_tmp = array[i as usize] * set_target_at_time(start_value, end_value, start_time, end_time, time);
+    // let block_tmp = array[i as usize] * set_target_at_time(start_value, end_value, start_time, end_time, time);
+    // let block_tmp = array[i as usize] * set_value_curve_at_time(vec![0.0, 1.0, 1.0, 0.01, 1.0, 0.0, 0.5], start_time, 6.0, time);
     block.push(block_tmp);
   }
 
@@ -199,7 +200,7 @@ pub fn volume_fn(array: Vec<f32>, start_value: f32, end_value: f32, start_time: 
 
 #[wasm_bindgen]
 pub fn exponential_ramp_to_value_at_time(start_value: f32, end_value: f32, start_time: f32, end_time:f32, time: f32) -> f32 {
-  if start_time + time <= end_time {
+  if start_time <= time && time < end_time {
     start_value * (end_value / start_value).powf((time - start_time) / (end_time - start_time))
   } else {
     end_value
@@ -208,7 +209,7 @@ pub fn exponential_ramp_to_value_at_time(start_value: f32, end_value: f32, start
 
 #[wasm_bindgen]
 pub fn linear_ramp_to_value_at_time(start_value: f32, end_value: f32, start_time: f32, end_time:f32, time: f32) -> f32 {
-  if start_time + time <= end_time {
+    if start_time <= time && time < end_time {
     start_value + (end_value -  start_value) * ((time - start_time) / (end_time - start_time))
   } else {
     end_value
@@ -221,14 +222,28 @@ pub fn set_target_at_time(start_value: f32, target: f32, start_time: f32, time_c
 }
 
 // 作業中
-/*
 #[wasm_bindgen]
-pub fn set_value_curve_at_time(values: Vec<f32>, start_time: f32, duration: f32, sample_rate: f32, current_frame: f32) -> f32 {
-  let sample_cycle = 1.0 / sample_rate;
-  for i in 0..(duration * sample_cycle) {
-    let time = sample_cycle * (i as f32 + (128.0 * (current_frame / 128.0 - 1.0)));
-  }
+pub fn set_value_curve_at_time(values: Vec<f32>, start_time: f32, duration: f32, time: f32) -> f32 {
+  let seconds_per_interval = duration / (values.len() - 1) as f32;
 
-  let k = (((values.len() as f32 - 1.0) / duration) * (time - start_time)).floor();
+  if ((time / seconds_per_interval).floor() as usize) < (values.len() - 1) {
+    let v_0 = values[(time / seconds_per_interval).floor() as usize];
+    let v_1 = values[(time / seconds_per_interval).floor() as usize + 1];
+    let t_0 = start_time + seconds_per_interval * (time / seconds_per_interval).floor();
+    let t_1 = start_time + seconds_per_interval * ((time / seconds_per_interval).floor() + 1.0);
+
+    if ((time / seconds_per_interval).floor() as usize) < 1 {
+      linear_ramp_to_value_at_time(v_0, v_1, t_0, t_1, time)
+    } else {
+      linear_ramp_to_value_at_time(v_0, v_1, t_0, t_1, time)
+    }
+  } else {
+    values[values.len() - 1]
+  }
 }
-*/
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: f32);
+}
