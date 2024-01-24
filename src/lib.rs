@@ -115,6 +115,40 @@ pub fn synthesize_oscillator_fn(oscillator1: Vec<f32>, oscillator2: Vec<f32>, os
   block
 }
 
+// 命名は仮、input_inとか被りまくりなのであとから考慮
+#[wasm_bindgen]
+pub fn filter_fn(input_block: Vec<f32>, input_in1: f32, input_in2: f32, input_out1: f32, input_out2: f32, frequency: f32, sample_rate: f32, resonance: f32, size: usize) -> Vec<f32> {
+  let mut block: Vec<f32> = Vec::with_capacity(size);
+  
+  let omega = 2.0 * PI * frequency / sample_rate;
+  let alpha = (omega).sin() / (2.0 * resonance);
+
+  // NOTE: JS側がfloat32でしか受け取ることができない
+  let a0: f32 = 1.0 + alpha;
+  let a1: f32 = -2.0 * omega.cos();
+  let a2: f32 = 1.0 - alpha;
+  let b0: f32 = (1.0 - omega.cos()) / 2.0;
+  let b1: f32 = 1.0 - omega.cos();
+  let b2: f32 = (1.0 - omega.cos()) / 2.0;
+
+  let mut in1: f32 = input_in1;
+  let mut in2: f32 = input_in2;
+  let mut out1: f32 = input_out1;
+  let mut out2: f32 = input_out2;
+
+  for i in 0..size {
+    let filtered_block = b0/a0 * input_block[i] + b1/a0 * in1 + b2/a0 * in2 - a1/a0 * out1 - a2/a0 * out2;
+    block.push(filtered_block);
+
+    in2 = in1;
+    in1 = input_block[i];
+    out2 = out1;
+    out1 = filtered_block;
+  }
+
+  block
+}
+
 // 正弦波の式
 #[wasm_bindgen]
 pub fn sine(frequency: f32, phase: f32, sample_rate: f32, gain: f32) -> f32 {
@@ -188,7 +222,8 @@ pub fn volume_fn(array: Vec<f32>, start_value: f32, end_value: f32, start_time: 
 
   for i in 0..size {
     let time = sample_cycle * (i as f32 + (128.0 * (current_frame / 128.0 - 1.0)));
-    let block_tmp = array[i as usize] * exponential_ramp_to_value_at_time(start_value, end_value, start_time, end_time, time);
+    let block_tmp = array[i as usize];
+    // let block_tmp = array[i as usize] * exponential_ramp_to_value_at_time(start_value, end_value, start_time, end_time, time);
     // let block_tmp = array[i as usize] * linear_ramp_to_value_at_time(start_value, end_value, start_time, end_time, time);
     // let block_tmp = array[i as usize] * set_target_at_time(start_value, end_value, start_time, end_time, time);
     // let block_tmp = array[i as usize] * set_value_curve_at_time(vec![0.0, 1.0, 1.0, 0.01, 1.0, 0.0, 0.5], start_time, 6.0, time);

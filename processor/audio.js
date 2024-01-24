@@ -2,6 +2,7 @@ import init, {
   key_frequency_fn,
   oscillator_fn,
   synthesize_oscillator_fn,
+  filter_fn,
   phase_fn,
   volume_fn,
 } from "../pkg/audio_logic.js";
@@ -16,6 +17,7 @@ registerProcessor(
       this.keyFrequencyFn = null;
       this.oscillatorFn = null;
       this.synthesizeOscillatorFn = null;
+      this.filterFn = null;
       this.phase1Fn = null;
       this.volumeFn = null;
       this.phase1 = 0;
@@ -31,6 +33,10 @@ registerProcessor(
       this.isPlayed = false;
       this.size = 128;
       this.frame = 0;
+      this.in1 = 0;
+      this.in2 = 0;
+      this.out1 = 0;
+      this.out2 = 0;
 
       // audioNodeから受信したメッセージの処理
       this.port.onmessage = async (event) => {
@@ -42,6 +48,7 @@ registerProcessor(
           this.keyFrequencyFn = key_frequency_fn;
           this.oscillatorFn = oscillator_fn;
           this.synthesizeOscillatorFn = synthesize_oscillator_fn;
+          this.filterFn = filter_fn;
           this.phaseFn = phase_fn;
           this.volumeFn = volume_fn;
         }
@@ -180,7 +187,7 @@ registerProcessor(
       let output = outputs[0];
 
       let keyFrequency = this.keyFrequencyFn(this.keyPitch, this.keyName);
-      let oscillator1_out = this.oscillatorFn(
+      let oscillator1Out = this.oscillatorFn(
         this.oscillatorType1,
         keyFrequency,
         parameters.coarse1[0],
@@ -191,7 +198,7 @@ registerProcessor(
         sampleRate,
         this.size
       );
-      let oscillator2_out = this.oscillatorFn(
+      let oscillator2Out = this.oscillatorFn(
         this.oscillatorType2,
         keyFrequency,
         parameters.coarse2[0],
@@ -202,7 +209,7 @@ registerProcessor(
         sampleRate,
         this.size
       );
-      let oscillator3_out = this.oscillatorFn(
+      let oscillator3Out = this.oscillatorFn(
         this.oscillatorType3,
         keyFrequency,
         parameters.coarse3[0],
@@ -214,15 +221,33 @@ registerProcessor(
         this.size
       );
 
-      let synthesizedOscillator = this.synthesizeOscillatorFn(
-        oscillator1_out,
-        oscillator2_out,
-        oscillator3_out,
+      let synthesizedOscillatorOut = this.synthesizeOscillatorFn(
+        oscillator1Out,
+        oscillator2Out,
+        oscillator3Out,
         this.size
       );
 
+      let filteredOut = this.filterFn(
+        synthesizedOscillatorOut,
+        this.in1,
+        this.in2,
+        this.out1,
+        this.out2,
+        600.0,
+        sampleRate,
+        4.0,
+        this.size
+      );
+
+      this.in1 = synthesizedOscillatorOut[this.size - 1];
+      this.in2 = synthesizedOscillatorOut[this.size - 2];
+      this.out1 = filteredOut[this.size - 1];
+      this.out2 = filteredOut[this.size - 2];
+
       let volume_out = volume_fn(
-        synthesizedOscillator,
+        // synthesizedOscillatorOut,
+        filteredOut, // 合成したあとにfilterかけたものを入れる
         0.01,
         parameters.masterVolume[0],
         0,
